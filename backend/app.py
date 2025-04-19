@@ -5,6 +5,9 @@ import os
 import tempfile
 from parse import procesar_msgs
 from group import agrupar_por_fecha
+from collections import defaultdict
+
+archivos_por_sesion = defaultdict(list)
 
 app = Flask(__name__)
 app.secret_key = 'clave_super_secreta'
@@ -31,14 +34,21 @@ def subir_archivos():
         else:
             errores.append(f"Archivo ignorado: {archivo.filename}")
 
-    session['archivos_subidos'] = guardados
-    return jsonify({'mensaje': 'Archivos subidos correctamente', 'errores': errores})
+    session_id = session.get('id')
+    if not session_id:
+        import uuid
+        session_id = str(uuid.uuid4())
+        session['id'] = session_id
+
+    archivos_por_sesion[session_id] = guardados
+    return jsonify({'mensaje': 'Archivos subidos correctamente', 'errores': errores, 'id': session_id, 'guardados': guardados})
 
 @app.route('/procesar-correos', methods=['POST'])
 def procesar_correos():
-    rutas = session.get('archivos_subidos', [])
+    session_id = session.get('id')
+    rutas = archivos_por_sesion.get(session_id, [])
     if not rutas:
-        return jsonify({'error': 'No hay archivos subidos'}), 400
+        return jsonify({'error': 'No hay archivos subidos', 'id': session_id, 'guardados': rutas}), 400
 
     suscripciones_csv = os.path.join("suscripciones.csv")
     correos, errores = procesar_msgs(rutas, suscripciones_csv)

@@ -1,4 +1,4 @@
-import os
+import pythoncom
 import re
 import csv
 from datetime import timedelta
@@ -95,7 +95,7 @@ def procesar_correo(correo, errores, suscripciones):
     asunto = correo["asunto"]
     cuerpo = correo["cuerpo"]
     remitente = correo["correo_remitente"]
-    fecha_utc5 = correo["fecha_objeto"] - timedelta(hours=5)
+    fecha_utc5 = correo["fecha_objeto"]# - timedelta(hours=5)
 
     if "microsoft" not in remitente.lower():
         errores.append(f"Correo ignorado (no Microsoft) - Asunto: {asunto} - Fecha: {fecha_utc5.strftime("%Y-%m-%d")} - Hora: {fecha_utc5.strftime("%H:%M")}")
@@ -176,26 +176,31 @@ def procesar_msgs(rutas, suscripciones_csv):
     resultados = []
     errores = []
 
-    outlook = win32com.client.Dispatch("Outlook.Application")
+    pythoncom.CoInitialize()
 
-    for ruta in rutas:
-        try:
-            mensaje = outlook.CreateItemFromTemplate(ruta)
-            if mensaje.Class == 43:  # MailItem
-                correo_info = {
-                    "asunto": mensaje.Subject,
-                    "remitente": mensaje.SenderName,
-                    "correo_remitente": mensaje.SenderEmailAddress,
-                    "destinatario": mensaje.To,
-                    "fecha": mensaje.ReceivedTime.strftime("%Y-%m-%d %H:%M:%S"),
-                    "fecha_objeto": mensaje.ReceivedTime,
-                    "cuerpo": mensaje.Body
-                }
-                resultado, errores = procesar_correo(correo_info, errores, suscripciones)
-                if resultado:
-                    resultados.append(resultado)
-        except Exception as e:
-            errores.append(f"Error al abrir {ruta}: {e}")
-    return resultados, errores
+    try:
+        outlook = win32com.client.Dispatch("Outlook.Application")
+
+        for ruta in rutas:
+            try:
+                mensaje = outlook.CreateItemFromTemplate(ruta)
+                if mensaje.Class == 43:  # MailItem
+                    correo_info = {
+                        "asunto": mensaje.Subject,
+                        "remitente": mensaje.SenderName,
+                        "correo_remitente": mensaje.SenderEmailAddress,
+                        "destinatario": mensaje.To,
+                        "fecha": mensaje.ReceivedTime.strftime("%Y-%m-%d %H:%M:%S"),
+                        "fecha_objeto": mensaje.ReceivedTime,
+                        "cuerpo": mensaje.Body
+                    }
+                    resultado, errores = procesar_correo(correo_info, errores, suscripciones)
+                    if resultado:
+                        resultados.append(resultado)
+            except Exception as e:
+                errores.append(f"Error al abrir {ruta}: {e}")
+        return resultados, errores
+    finally:
+        pythoncom.CoUninitialize()
 
 
