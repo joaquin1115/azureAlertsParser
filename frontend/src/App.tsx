@@ -129,7 +129,7 @@ function App() {
 
           {/* Results and Errors Section */}
           {(Object.keys(results).length > 0 || errors.length > 0) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
               {Object.keys(results).length > 0 && (
                 <div className="bg-white shadow rounded-lg overflow-hidden">
                   <div className="px-6 py-5 border-b border-gray-200">
