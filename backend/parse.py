@@ -84,7 +84,7 @@ def determinar_alias(nombre_alerta, cuerpo):
         return "memoria"
     if "disk" in nombre or "disco" in nombre:
         return "disco"
-    if "create" in nombre or "creacion" in nombre:
+    if "create" in nombre or "creacion" in nombre or "creación" in nombre:
         return "creación de recursos"
     if "failed requests" in nombre:
         return "solicitudes fallidas"
@@ -119,16 +119,22 @@ def procesar_correo(correo, errores, suscripciones):
         if "Severity:" in asunto:
             nombre_alerta = re.search(r"Severity:\s*\d\s*(.+)", asunto)
             tipo = "Activated" if "Activated" in asunto else "Deactivated" if "Deactivated" in asunto else "Otro"
-        elif "Alert" in asunto and "was" in asunto:
+        if "Alert" in asunto and "was" in asunto and not nombre_alerta:
             nombre_alerta = re.search(r"Alert\s+[\"']?([^\"']+)[\"']?\s+was", asunto)
+            nombre_alerta = nombre_alerta or re.search(r"Alert\s+(.*?)\s+was", asunto)
             tipo = "Otro"
-        elif "alert" in asunto and "was" in asunto:
+        if "alert" in asunto and "was" in asunto and not nombre_alerta:
             nombre_alerta = re.search(r"alert\s+[\"']?([^\"']+)[\"']?\s+was", asunto)
+            nombre_alerta = nombre_alerta or re.search(r"alert\s+(.*?)\s+was", asunto)
             tipo = "Otro"
 
-        if nombre_alerta and not isinstance(nombre_alerta, str):
-            nombre_alerta = nombre_alerta.group(1).strip()
+        if not nombre_alerta:
+            errores.append(f"No se pudo obtener nombre de alerta para este asunto: {asunto}")
+            return (None, errores)
 
+        if not isinstance(nombre_alerta, str):
+            nombre_alerta = nombre_alerta.group(1).strip()
+    
     # Si aún no se definió alias, intentar inferirlo
     if not alias:
         alias = determinar_alias(nombre_alerta, cuerpo)
@@ -202,5 +208,3 @@ def procesar_msgs(rutas, suscripciones_csv):
         return resultados, errores
     finally:
         pythoncom.CoUninitialize()
-
-
