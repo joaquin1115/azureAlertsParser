@@ -57,8 +57,8 @@ def extraer_nombre_recurso_desde_resource_id(cuerpo, recurso_valor_previo):
 
 # === Buscar por nombre y suscripción desde texto plano ===
 def extraer_nombre_y_suscripcion_texto(cuerpo, recurso_valor_previo, suscripcion_id_valor_previo):
-    recurso = re.search(r"Target resource name\s+([^\s]+)", cuerpo)
-    suscripcion_id = re.search(r"Subscription ID:\s*([a-f0-9\-]+)", cuerpo, re.IGNORECASE)
+    recurso = re.search(r"Target resource name\s+([^\s]+)", cuerpo) or re.search(r"Backup item\(s\)\s+([^\s]+)", cuerpo) or re.search(r"recovery services vault\s+([^\s]+)", cuerpo)
+    suscripcion_id = re.search(r"Subscription ID:\s*([a-f0-9\-]+)", cuerpo, re.IGNORECASE) or re.search(r"Subscription ID\s*([a-f0-9\-]+)", cuerpo, re.IGNORECASE)
     suscripcion_nombre = re.search(r"Subscription name:\s*(.+)", cuerpo) or re.search(r'the Azure subscription\s+(.+?)(?:\s*\.)', cuerpo)
     return (
         recurso_valor_previo or (recurso.group(1) if recurso else None),
@@ -115,6 +115,15 @@ def procesar_correo(correo, errores, suscripciones):
         nombre_alerta = "Billing"
         alias = "billing"
         tipo = "Otro"
+    elif "Backup" in asunto:
+        if "configured successfully" in asunto:
+            nombre_alerta = "configuración correcta de alertas de backup"
+            alias = nombre_alerta
+            tipo = "Otro"
+        elif "failure" in asunto:
+            nombre_alerta = "error de backup"
+            alias = nombre_alerta
+            tipo = "Otro"
     else:
         if "Severity:" in asunto:
             nombre_alerta = re.search(r"Severity:\s*\d\s*(.+)", asunto)
